@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/plink_final_1.wav-9a79d38329b8581171e392b03ab65c48.sample"
+
+[deps]
+
+source_file="res://assets/audio/sfx/final_hammer/plink_final_1.wav"
+dest_files=[ "res://.import/plink_final_1.wav-9a79d38329b8581171e392b03ab65c48.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0

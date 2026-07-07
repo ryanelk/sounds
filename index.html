@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SFX Library</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1>🎧 SFX Library</h1>
+      <span id="count-badge" class="badge">0 sounds</span>
+    </div>
+    <div class="topbar-right">
+      <input id="search" type="search" placeholder="Search by name…" autocomplete="off" />
+      <label class="sort-label">Sort
+        <select id="sort">
+          <option value="name-asc">Name A→Z</option>
+          <option value="name-desc">Name Z→A</option>
+          <option value="dur-asc">Duration ↑</option>
+          <option value="dur-desc">Duration ↓</option>
+          <option value="peak-desc">Loudest (peak)</option>
+          <option value="peak-asc">Quietest (peak)</option>
+          <option value="size-asc">Size ↑</option>
+          <option value="size-desc">Size ↓</option>
+          <option value="game-asc">Game</option>
+        </select>
+      </label>
+      <button id="export-btn" title="Download library-data.json (tags + favorites) to commit for GitHub Pages">Export</button>
+      <label class="import-label" title="Load a committed library-data.json into your browser">
+        Import
+        <input id="import-input" type="file" accept="application/json,.json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <div id="bulk-bar" class="bulk-bar" hidden>
+    <span id="bulk-count" class="bulk-count">0 selected</span>
+    <input id="bulk-tag-input" class="bulk-tag-input" type="text" placeholder="tag name…" list="tag-suggestions" />
+    <button id="bulk-add">Add tag</button>
+    <button id="bulk-remove">Remove tag</button>
+    <button id="bulk-star">★ Star</button>
+    <button id="bulk-unstar">☆ Unstar</button>
+    <span class="bulk-spacer"></span>
+    <button id="bulk-select-visible">Select all visible</button>
+    <button id="bulk-clear">Clear selection</button>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <button id="fav-toggle" class="fav-toggle">★ Favorites only <span id="fav-count" class="chip-count">0</span></button>
+
+      <section class="filter-group">
+        <h2>Games</h2>
+        <div id="filter-games" class="chip-filters"></div>
+      </section>
+
+      <section class="filter-group">
+        <h2>Length</h2>
+        <div id="filter-lengths" class="chip-filters"></div>
+      </section>
+
+      <section class="filter-group">
+        <div class="filter-group-head">
+          <h2>Tags</h2>
+          <label class="match-toggle" title="AND = must have every selected tag. OR = any selected tag.">
+            <input id="tag-match-mode" type="checkbox" /> match all
+          </label>
+        </div>
+        <div id="filter-tags" class="chip-filters"></div>
+        <p id="no-tags-hint" class="hint">No custom tags yet. Add some on any sound below.</p>
+      </section>
+
+      <button id="clear-filters" class="clear-btn">Clear all filters</button>
+    </aside>
+
+    <main class="content">
+      <div id="results-info" class="results-info"></div>
+      <div id="grid" class="grid"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <p>No sounds match the current filters.</p>
+      </div>
+      <div id="no-manifest" class="empty-state" hidden>
+        <h2>No sounds found yet</h2>
+        <p>Paste your game folders into the <code>sounds/</code> directory, then run:</p>
+        <pre><code>node scan.mjs</code></pre>
+        <p>…and refresh this page.</p>
+      </div>
+    </main>
+  </div>
+
+  <datalist id="tag-suggestions"></datalist>
+
+  <!-- Auto-generated manifest (window.__SFX_MANIFEST__). Loaded as a global so file:// works too. -->
+  <script src="data/manifest.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/equip_hammer.wav-d606107d9cf2b4f724d463f7355a2e8b.sample"
+
+[deps]
+
+source_file="res://assets/audio/sfx/final_weapon_equip/equip_hammer.wav"
+dest_files=[ "res://.import/equip_hammer.wav-d606107d9cf2b4f724d463f7355a2e8b.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0

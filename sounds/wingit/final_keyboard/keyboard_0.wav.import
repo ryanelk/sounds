@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/keyboard_0.wav-7c32efd1d12e46408f49eee4f56d88be.sample"
+
+[deps]
+
+source_file="res://assets/audio/sfx/final_keyboard/keyboard_0.wav"
+dest_files=[ "res://.import/keyboard_0.wav-7c32efd1d12e46408f49eee4f56d88be.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0

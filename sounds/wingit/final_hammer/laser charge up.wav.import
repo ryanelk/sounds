@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/laser charge up.wav-49b9a3d6bbb44bcc8c4d0fa71a9336e6.sample"
+
+[deps]
+
+source_file="res://assets/audio/sfx/final_hammer/laser charge up.wav"
+dest_files=[ "res://.import/laser charge up.wav-49b9a3d6bbb44bcc8c4d0fa71a9336e6.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0
