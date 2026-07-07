@@ -59,6 +59,12 @@
     bulkBar: el('bulk-bar'), bulkCount: el('bulk-count'), bulkTagInput: el('bulk-tag-input'),
     bulkAdd: el('bulk-add'), bulkRemove: el('bulk-remove'), bulkStar: el('bulk-star'),
     bulkUnstar: el('bulk-unstar'), bulkSelectVisible: el('bulk-select-visible'), bulkClear: el('bulk-clear'),
+    // sync
+    syncStatus: el('sync-status'), syncBtn: el('sync-btn'), syncModal: el('sync-modal'),
+    syncClose: el('sync-close'), syncConnectView: el('sync-connect-view'), syncConnectedView: el('sync-connected-view'),
+    gistToken: el('gist-token'), gistId: el('gist-id'), gistConnect: el('gist-connect'),
+    syncError: el('sync-error'), gistLink: el('gist-link'), gistSyncNow: el('gist-sync-now'),
+    gistPull: el('gist-pull'), gistDisconnect: el('gist-disconnect'),
   };
 
   // ================= helpers =================
@@ -66,8 +72,8 @@
     try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }
   }
   function saveJSON(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
-  function saveTags() { saveJSON(TAGS_KEY, tagStore); }
-  function saveFavs() { saveJSON(FAV_KEY, [...favorites]); }
+  function saveTags() { saveJSON(TAGS_KEY, tagStore); markDirty(); }
+  function saveFavs() { saveJSON(FAV_KEY, [...favorites]); markDirty(); }
   function tagsFor(id) { return tagStore[id] || []; }
   function durOf(id) { return analysis[id] ? analysis[id].duration : null; }
   function bucketFor(id) {
@@ -500,12 +506,15 @@
     a.href = url; a.download = 'library-data.json'; a.click();
     URL.revokeObjectURL(url);
   }
-  function applyData(data) {
+  function applyData(data, opts) {
     if (!data || typeof data !== 'object') return;
+    const remote = opts && opts.remote; // loaded from gist/file — don't schedule a push back
+    if (remote) suppressSync = true;
     if (data.tags && typeof data.tags === 'object') tagStore = data.tags;
     else if (!Array.isArray(data.favorites)) tagStore = data; // legacy: flat tag map
     if (Array.isArray(data.favorites)) favorites = new Set(data.favorites);
     saveTags(); saveFavs(); render();
+    if (remote) suppressSync = false;
   }
   function importData(file) {
     const reader = new FileReader();
@@ -520,8 +529,121 @@
     try {
       const res = await fetch(DATA_FILE, { cache: 'no-store' });
       if (!res.ok) return;
-      applyData(await res.json());
+      applyData(await res.json(), { remote: true });
     } catch { /* file:// or no file — fine */ }
+  }
+
+  // ================= gist sync =================
+  const SYNC_DEBOUNCE_MS = 5 * 60 * 1000; // batch edits; push ~5 min after the last one
+  let credentials = GistStore.getCredentials();
+  let syncState = 'local';   // local | synced | pending | saving | saved | error
+  let suppressSync = false;  // true while applying remote data
+  let syncTimer = null;
+
+  const currentData = () => ({ tags: tagStore, favorites: [...favorites] });
+
+  // Called from saveTags()/saveFavs() — the single chokepoint for every tag/favorite change.
+  function markDirty() {
+    if (suppressSync || !credentials) return;
+    GistStore.setPending();
+    setSyncState('pending');
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushToGist, SYNC_DEBOUNCE_MS);
+  }
+
+  async function pushToGist() {
+    if (!credentials) return;
+    clearTimeout(syncTimer);
+    setSyncState('saving');
+    try {
+      await GistStore.saveToGist(credentials.token, credentials.gistId, currentData());
+      GistStore.clearPending();
+      setSyncState('saved');
+      setTimeout(() => { if (syncState === 'saved') setSyncState('synced'); }, 2500);
+    } catch (e) {
+      setSyncState('error', e.message);
+    }
+  }
+
+  function setSyncState(state, msg) {
+    syncState = state;
+    const map = {
+      local: ['Local only', 'local'],
+      synced: ['Synced ✓', 'ok'],
+      saved: ['Saved ✓', 'ok'],
+      pending: ['Unsynced changes', 'pending'],
+      saving: ['Syncing…', 'saving'],
+      error: ['Sync error — retry', 'error'],
+    };
+    const [text, cls] = map[state] || ['', ''];
+    dom.syncStatus.textContent = text;
+    dom.syncStatus.className = 'sync-status ' + cls;
+    dom.syncStatus.title = msg || (credentials ? `Gist ${credentials.gistId}` : 'Not connected');
+  }
+
+  function updateConnectedUI() {
+    const connected = !!credentials;
+    dom.syncConnectView.hidden = connected;
+    dom.syncConnectedView.hidden = !connected;
+    if (connected) {
+      dom.gistLink.textContent = credentials.gistId;
+      dom.gistLink.href = 'https://gist.github.com/' + credentials.gistId;
+    }
+  }
+  function openSyncModal() { updateConnectedUI(); showSyncError(''); dom.syncModal.hidden = false; }
+  function closeSyncModal() { dom.syncModal.hidden = true; }
+  function showSyncError(msg) { dom.syncError.textContent = msg || ''; dom.syncError.hidden = !msg; }
+
+  async function handleConnect() {
+    const token = dom.gistToken.value.trim();
+    if (!token) return showSyncError('Token is required.');
+    const mode = document.querySelector('input[name="gistmode"]:checked').value;
+    dom.gistConnect.disabled = true; showSyncError('');
+    try {
+      let gistId;
+      if (mode === 'new') {
+        gistId = await GistStore.createGist(token, currentData()); // uploads current local data
+      } else {
+        gistId = GistStore.extractGistId(dom.gistId.value);
+        if (!gistId) throw new Error('Gist ID is required.');
+        applyData(await GistStore.loadFromGist(token, gistId), { remote: true }); // remote wins on connect
+      }
+      credentials = { token, gistId };
+      GistStore.saveCredentials(token, gistId);
+      GistStore.clearPending();
+      dom.gistToken.value = '';
+      updateConnectedUI();
+      setSyncState('synced');
+      closeSyncModal();
+    } catch (e) {
+      showSyncError(e.message);
+    } finally {
+      dom.gistConnect.disabled = false;
+    }
+  }
+
+  function handleDisconnect() {
+    if (!confirm('Disconnect from GitHub? Your tags & favorites stay saved on this device.')) return;
+    GistStore.clearCredentials(); GistStore.clearPending();
+    credentials = null;
+    clearTimeout(syncTimer);
+    updateConnectedUI();
+    setSyncState('local');
+    closeSyncModal();
+  }
+
+  async function handlePull() {
+    if (!credentials) return;
+    if (!confirm('Reload from gist? This replaces the tags & favorites on this device.')) return;
+    setSyncState('saving');
+    try {
+      applyData(await GistStore.loadFromGist(credentials.token, credentials.gistId), { remote: true });
+      GistStore.clearPending();
+      setSyncState('synced');
+      closeSyncModal();
+    } catch (e) {
+      setSyncState('error', e.message);
+    }
   }
 
   // ================= events =================
@@ -545,9 +667,41 @@
   dom.bulkTagInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') bulkAddTag(); });
   window.addEventListener('resize', () => { for (const id of cardEls.keys()) drawWaveform(id, 0); });
 
+  // sync events
+  dom.syncBtn.addEventListener('click', openSyncModal);
+  dom.syncClose.addEventListener('click', closeSyncModal);
+  dom.syncModal.addEventListener('click', (e) => { if (e.target === dom.syncModal) closeSyncModal(); });
+  dom.syncStatus.addEventListener('click', () => {
+    if (syncState === 'error' && credentials) pushToGist(); else openSyncModal();
+  });
+  dom.gistConnect.addEventListener('click', handleConnect);
+  dom.gistDisconnect.addEventListener('click', handleDisconnect);
+  dom.gistSyncNow.addEventListener('click', pushToGist);
+  dom.gistPull.addEventListener('click', handlePull);
+  document.querySelectorAll('input[name="gistmode"]').forEach((r) => r.addEventListener('change', () => {
+    dom.gistId.hidden = document.querySelector('input[name="gistmode"]:checked').value !== 'existing';
+  }));
+
   // ================= boot =================
   render();
   updateBulkBar();
-  seedFromFile();
   analyzePending();
+  updateConnectedUI();
+
+  (async function boot() {
+    if (!credentials) { setSyncState('local'); seedFromFile(); return; }
+    setSyncState(GistStore.hasPending() ? 'pending' : 'saving');
+    try {
+      const remote = await GistStore.loadFromGist(credentials.token, credentials.gistId);
+      if (GistStore.hasPending()) {
+        // Lean last-write-wins: this device has unsynced edits (the newest), so push them.
+        pushToGist();
+      } else {
+        applyData(remote, { remote: true });
+        setSyncState('synced');
+      }
+    } catch (e) {
+      setSyncState('error', e.message); // keep local/committed data as fallback
+    }
+  })();
 })();

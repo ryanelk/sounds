@@ -69,16 +69,40 @@ Beyond the automatic `game` and `length` tags, you can add your own reusable tag
   (a sound must have *every* selected tag) vs. the default OR.
 - Use the **bulk bar** (appears when you tick sound checkboxes) to tag/star many at once.
 
-### Making tags + favorites permanent (for GitHub Pages)
+### Making tags + favorites permanent
 
-`localStorage` lives only in your browser. To ship your tags and favorites with the site:
+`localStorage` lives only in your browser. There are two ways to persist your tags/favorites
+beyond this device — use either or both:
+
+**A. Manual file (simple, read-only for visitors)**
 
 1. Click **Export** — downloads `library-data.json` (contains `tags` and `favorites`).
 2. Move that file to `data/library-data.json` in the project and commit it.
 
-When the site is served (e.g. on Pages), it loads `data/library-data.json` automatically as
-the starting point. **Import** lets you load a `library-data.json` back into a browser that
-doesn't have it yet (handy on another machine, or over `file://`).
+When served, the site loads `data/library-data.json` automatically as the starting point.
+**Import** loads one back into a browser that doesn't have it yet. The downside: editing tags
+on the live site does nothing permanent until you export → commit → redeploy.
+
+**B. GitHub Gist sync (live, no redeploy) — recommended**
+
+Click **☁ Sync** in the top bar to save your tags + favorites to a **private GitHub Gist**.
+Edits then persist automatically and follow you across devices, with no rebuild.
+
+1. Create a **fine-grained Personal Access Token** with **Account permissions → Gists:
+   Read and write** (the modal links straight to the page).
+2. Paste the token, choose **Create new gist** (first time) or **Use existing gist** (to
+   connect another device to the same gist), and hit **Connect**.
+3. From then on, changes auto-save to the gist ~5 minutes after your last edit. The status
+   pill shows **Local only / Unsynced changes / Syncing… / Synced ✓**. Use **Sync now** in the
+   modal to push immediately, or **Reload from gist** to pull the latest.
+
+How the two combine: visitors **without** a token see the committed `data/library-data.json`
+snapshot; **you** (token connected) read/write the live gist, which takes priority on load.
+
+> **Token safety:** the token is entered at runtime and stored only in this browser's
+> `localStorage` — it is **never** committed or bundled. Since your Pages repo is public,
+> never hard-code a token in the source. Use a fine-grained token limited to the `gist`
+> permission so it can't touch anything else. Disconnect (⚙ in the modal) clears it.
 
 ## Deploying to GitHub Pages
 
@@ -86,6 +110,10 @@ doesn't have it yet (handy on another machine, or over `file://`).
 2. Commit everything **including the `sounds/` folder** (the audio files are served directly).
 3. Push to GitHub, then enable Pages: repo **Settings → Pages → Deploy from branch**,
    pick your branch and the root (`/`). Done.
+
+This site is plain static files, so **no build step or GitHub Action is needed** — Pages serves
+the folder as-is. (All internal paths are relative, so it works under a `/repo-name/` subpath
+automatically.) If you use Gist sync, your tags live in the gist and don't need redeploying.
 
 > Note: GitHub repos have size limits (soft ~1 GB, and a 100 MB per-file cap). Large
 > `.wav` libraries can get big — converting to `.ogg`/`.mp3` shrinks them a lot if needed.
@@ -95,7 +123,8 @@ doesn't have it yet (handy on another machine, or over `file://`).
 ```
 index.html          the app shell
 css/style.css       styling
-js/app.js               all UI logic (waveform, loudness, tags, favorites, bulk, sort, filter)
+js/app.js               all UI logic (waveform, loudness, tags, favorites, bulk, sort, filter, sync)
+js/gistStorage.js       GitHub Gist API layer for cloud-syncing tags + favorites
 scan.mjs                scans sounds/ -> data/manifest.js   (run after adding sounds)
 serve.mjs               tiny zero-dependency local static server
 data/manifest.js        AUTO-GENERATED index incl. duration/loudness/waveform (don't edit)
